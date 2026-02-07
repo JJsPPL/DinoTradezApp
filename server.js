@@ -255,6 +255,66 @@ app.get('/api/insider-trades', async (req, res) => {
   }
 });
 
+// SEC EDGAR S-3 Filings (public API, no key needed)
+app.get('/api/sec-filings', async (req, res) => {
+  try {
+    const formType = req.query.form || 'S-3';
+    const limit = Math.min(parseInt(req.query.limit) || 20, 40);
+
+    // Use SEC EDGAR full-text search API (EFTS)
+    const today = new Date().toISOString().split('T')[0];
+    const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+      .toISOString().split('T')[0];
+
+    const edgarResponse = await axios.get('https://efts.sec.gov/LATEST/search-index', {
+      params: {
+        q: `"${formType}"`,
+        forms: formType,
+        dateRange: 'custom',
+        startdt: threeMonthsAgo,
+        enddt: today,
+        from: 0,
+        size: limit,
+      },
+      headers: {
+        'User-Agent': 'DinoTradez/1.0 (contact@dinotradez.com)',
+        Accept: 'application/json',
+      },
+    });
+
+    const hits = edgarResponse.data?.hits?.hits || [];
+
+    const filings = hits.map((hit) => {
+      const src = hit._source || {};
+      const entityName = src.entity_name || src.display_names?.[0] || 'Unknown';
+      const ticker = src.tickers?.[0] || src.display_tickers?.[0] || null;
+      const filedDate = src.file_date || src.period_of_report || null;
+      const formTypeActual = src.form_type || formType;
+      const fileNum = src.file_num || '';
+      const accessionNo = (src.accession_no || '').replace(/-/g, '');
+
+      let filingUrl = null;
+      if (accessionNo) {
+        filingUrl = `https://www.sec.gov/Archives/edgar/data/${src.entity_id || ''}/${accessionNo}/${src.file_name || ''}`;
+      }
+
+      return {
+        companyName: entityName,
+        ticker,
+        filedDate,
+        formType: formTypeActual,
+        fileNum,
+        filingUrl,
+      };
+    });
+
+    res.json({ filings, total: edgarResponse.data?.hits?.total?.value || 0 });
+  } catch (error) {
+    console.error('Error fetching SEC filings:', error.message);
+    res.status(500).json({ error: 'Failed to fetch SEC filings', filings: [] });
+  }
+});
+
 // Serve React app for any other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'client/build', 'index.html'));

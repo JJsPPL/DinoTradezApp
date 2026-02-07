@@ -6,7 +6,7 @@ import { FaChartLine, FaChartBar, FaLightbulb, FaNewspaper, FaArrowUp, FaArrowDo
 // Components
 import LoadingIndicator from '../components/ui/LoadingIndicator';
 import StockCard from '../components/ui/StockCard';
-import StockChart from '../components/ui/StockChart';
+import TradingViewChart from '../components/ui/TradingViewChart';
 import NewsCard from '../components/ui/NewsCard';
 
 // Redux actions
@@ -15,16 +15,8 @@ import { fetchDarkPoolData } from '../features/darkPool/darkPoolSlice';
 import { fetchLottoPicks } from '../features/lottoPicks/lottoPicksSlice';
 import { fetchBullishWatchlist, fetchBearishWatchlist } from '../features/watchlists/watchlistsSlice';
 
-// Sample data for charts
-const sampleChartData = [
-  { date: 'Mon', price: 120 },
-  { date: 'Tue', price: 122 },
-  { date: 'Wed', price: 119 },
-  { date: 'Thu', price: 124 },
-  { date: 'Fri', price: 128 },
-  { date: 'Mon', price: 127 },
-  { date: 'Tue', price: 130 },
-];
+// Default chart symbol
+const DEFAULT_CHART_SYMBOL = 'USFD';
 
 // Sample news articles
 const sampleNews = [
@@ -78,51 +70,19 @@ const Dashboard = () => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
       
-      {/* Market Overview */}
+      {/* Chart - USFD with 200 HMA + MACD */}
       <section>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-white flex items-center">
             <FaChartLine className="mr-2 text-blue-400" />
-            Market Overview
+            Chart
           </h2>
           <Link to="/market-overview" className="text-sm text-blue-400 hover:text-blue-300">
-            View Full Overview →
+            View Market Overview →
           </Link>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <StockChart 
-            data={sampleChartData} 
-            title="S&P 500 (7 Days)" 
-            height={200} 
-            showLegend={false}
-          />
-          <div className="card">
-            <h3 className="text-lg font-bold text-white mb-4">Market Summary</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-gray-400">S&P 500</div>
-                <div className="text-xl font-bold text-white">4,892.32</div>
-                <div className="text-sm text-green-400">+1.2%</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">NASDAQ</div>
-                <div className="text-xl font-bold text-white">17,321.45</div>
-                <div className="text-sm text-green-400">+1.7%</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">DOW</div>
-                <div className="text-xl font-bold text-white">38,654.22</div>
-                <div className="text-sm text-green-400">+0.8%</div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">Russell 2000</div>
-                <div className="text-xl font-bold text-white">2,147.65</div>
-                <div className="text-sm text-green-400">+0.9%</div>
-              </div>
-            </div>
-          </div>
-        </div>
+
+        <TradingViewChart symbol={DEFAULT_CHART_SYMBOL} height={500} />
       </section>
       
       {/* Dark Pool & Lotto Picks */}
