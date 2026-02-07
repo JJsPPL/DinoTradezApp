@@ -284,29 +284,45 @@ app.get('/api/sec-filings', async (req, res) => {
 
     const hits = edgarResponse.data?.hits?.hits || [];
 
-    const filings = hits.map((hit) => {
-      const src = hit._source || {};
-      const entityName = src.entity_name || src.display_names?.[0] || 'Unknown';
-      const ticker = src.tickers?.[0] || src.display_tickers?.[0] || null;
-      const filedDate = src.file_date || src.period_of_report || null;
-      const formTypeActual = src.form_type || formType;
-      const fileNum = src.file_num || '';
-      const accessionNo = (src.accession_no || '').replace(/-/g, '');
+    // Deduplicate by accession number (one entry per filing)
+    const seen = new Set();
+    const filings = [];
 
-      let filingUrl = null;
-      if (accessionNo) {
-        filingUrl = `https://www.sec.gov/Archives/edgar/data/${src.entity_id || ''}/${accessionNo}/${src.file_name || ''}`;
+    for (const hit of hits) {
+      const src = hit._source || {};
+      const adsh = src.adsh || '';
+      if (seen.has(adsh)) continue;
+      seen.add(adsh);
+
+      // Parse display_names like "GD Culture Group Ltd  (GDC)  (CIK 0001641398)"
+      const displayName = src.display_names?.[0] || '';
+      let companyName = displayName;
+      let ticker = null;
+
+      const tickerMatch = displayName.match(/\(([A-Z]{1,5})\)/);
+      if (tickerMatch) {
+        ticker = tickerMatch[1];
+        companyName = displayName.split('(')[0].trim();
       }
 
-      return {
-        companyName: entityName,
+      const filedDate = src.file_date || null;
+      const formTypeActual = src.form || src.root_forms?.[0] || formType;
+      const cik = src.ciks?.[0]?.replace(/^0+/, '') || '';
+      const accessionNo = adsh;
+
+      let filingUrl = null;
+      if (accessionNo && cik) {
+        filingUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik}&type=S-3&dateb=&owner=include&count=10`;
+      }
+
+      filings.push({
+        companyName,
         ticker,
         filedDate,
         formType: formTypeActual,
-        fileNum,
         filingUrl,
-      };
-    });
+      });
+    }
 
     res.json({ filings, total: edgarResponse.data?.hits?.total?.value || 0 });
   } catch (error) {
